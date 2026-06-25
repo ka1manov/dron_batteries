@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зарядна станція — як правильно заряджати акумулятори дронів</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@500;600;700;800&family=Saira+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap&subset=cyrillic,latin" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F1115; --bg2:#13161C; --panel:#181C23; --panel2:#1D222B; --lcd:#0A0C10;
+  --line:#2A3039; --line-soft:rgba(255,255,255,.06);
+  --ink:#EAEDF1; --ink2:#A2A9B4; --ink3:#6B7280;
+  --accent:#FFB627; --accent-dim:rgba(255,182,39,.14); --accent-glow:rgba(255,182,39,.3);
+  --danger:#EF4444; --warn:#F59E0B; --ok:#34D399; --info:#38BDF8;
+  --r:14px; --r-sm:10px;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:"Saira",-apple-system,system-ui,sans-serif;
+  --cond:"Saira Condensed","Saira",system-ui,sans-serif;
+  --body:"Inter",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1100px 560px at 75% -10%, rgba(255,182,39,.05), transparent 60%),
+    linear-gradient(180deg,#0E1014,#0F1115 40%,#0D0F13);
+  color:var(--ink); font-family:var(--body); line-height:1.55; -webkit-font-smoothing:antialiased; letter-spacing:.1px;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:42px 42px;
+  -webkit-mask-image:radial-gradient(1400px 1000px at 50% 0%,#000,transparent 80%);
+  mask-image:radial-gradient(1400px 1000px at 50% 0%,#000,transparent 80%);
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+
+/* status bar */
+.statusbar{border-bottom:1px solid var(--line);background:rgba(13,15,19,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);position:sticky;top:0;z-index:50}
+.statusbar .wrap{display:flex;align-items:center;gap:14px;height:42px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;overflow:hidden}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);flex:none;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.statusbar b{color:var(--ink2);font-weight:500}
+.sb-right{margin-left:auto;display:flex;gap:18px}
+.sb-right span{white-space:nowrap}
+@media(max-width:680px){.sb-right span.hide{display:none}}
+
+/* hero */
+.hero{padding:54px 0 30px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--accent)}
+h1{font-family:var(--cond);font-weight:700;font-size:clamp(38px,7.5vw,78px);line-height:.94;letter-spacing:-.5px;text-transform:uppercase}
+h1 .lo{display:block;color:var(--ink3)}
+.lede{max-width:580px;margin-top:20px;color:var(--ink2);font-size:clamp(15px,2.4vw,17px)}
+.lede b{color:var(--ink);font-weight:600}
+
+/* section frame */
+section{padding:46px 0;border-top:1px solid var(--line-soft)}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+.sec-num{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.1em}
+.sec-head h2{font-family:var(--cond);font-weight:700;font-size:clamp(23px,4vw,32px);text-transform:uppercase;letter-spacing:.3px}
+.sec-head p{color:var(--ink3);font-size:14px;margin-left:auto;max-width:360px}
+
+/* ===== CONFIGURATOR ===== */
+.configurator{display:grid;grid-template-columns:1fr 1.05fr;gap:18px;align-items:start}
+.cfg-panel{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.cfg-panel h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:16px}
+/* chemistry chips */
+.chem-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.chchip{cursor:pointer;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-sm);padding:10px 8px;text-align:center;transition:.15s;font-family:inherit;color:var(--ink2)}
+.chchip:hover{border-color:var(--ink3)}
+.chchip .cc-n{font-family:var(--disp);font-weight:700;font-size:14px;color:var(--ink);display:block}
+.chchip .cc-sw{width:18px;height:3px;border-radius:2px;margin:5px auto 0}
+.chchip[aria-pressed="true"]{background:var(--panel2);border-color:var(--chc);box-shadow:inset 0 0 0 1px var(--chc)}
+.chchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* fields */
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink);font-family:var(--mono);font-size:15px;padding:11px 13px;transition:.15s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+/* goal toggle */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;margin-bottom:18px}
+.seg button{cursor:pointer;background:var(--bg);border:none;color:var(--ink2);font-family:var(--disp);font-weight:600;font-size:14px;padding:12px 8px;transition:.15s}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-dim);color:var(--accent)}
+.seg button .sub{display:block;font-family:var(--mono);font-size:10px;font-weight:400;color:var(--ink3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+.seg button[aria-pressed="true"] .sub{color:var(--accent)}
+/* speed */
+.speedlab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.speed{display:flex;gap:8px}
+.sbtn{flex:1;cursor:pointer;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink2);font-family:var(--mono);font-size:13px;padding:11px 0;transition:.15s;text-align:center}
+.sbtn .ss{display:block;font-size:9.5px;color:var(--ink3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+.sbtn:hover{border-color:var(--ink3)}
+.sbtn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.sbtn.on .ss{color:var(--accent)}
+.sbtn:disabled{opacity:.32;cursor:not-allowed}
+.sbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* RIGHT: console + meter + tiles */
+.cfg-out{display:flex;flex-direction:column;gap:14px}
+.console{background:var(--lcd);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+.console-head{display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--ink3);text-transform:uppercase}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.chl{margin-left:auto;color:var(--ink3)}
+.console-body{padding:6px 16px 12px}
+.crow{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-family:var(--mono)}
+.crow:last-child{border-bottom:none}
+.crow span{font-size:10.5px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase}
+.crow b{font-size:16px;color:var(--accent);font-weight:600;text-shadow:0 0 12px var(--accent-glow)}
+.crow b i{font-style:normal;color:var(--ink3);font-size:12px;font-weight:400;margin-left:2px}
+
+/* meter */
+.meter{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.mtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.mtop .ml{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.mtop .mpct{font-family:var(--mono);font-weight:600;font-size:26px;color:var(--accent)}
+.batwrap{display:flex;align-items:center}
+.battery{flex:1;position:relative;height:42px;border:2px solid var(--ink3);border-radius:8px;background:var(--bg);overflow:hidden}
+.bfill{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(90deg,rgba(255,182,39,.45),var(--accent));transition:width .55s cubic-bezier(.22,1,.36,1)}
+.btick{position:absolute;top:0;bottom:0;width:2px;background:var(--info);opacity:.85;transition:left .3s}
+.bnub{width:5px;height:18px;background:var(--ink3);border-radius:0 3px 3px 0;margin-left:2px}
+.mlegend{display:flex;gap:16px;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.mlegend i{font-style:normal}
+.mlegend .sw{display:inline-block;width:10px;height:6px;border-radius:2px;background:var(--accent);margin-right:5px;vertical-align:middle}
+.mlegend .swl{display:inline-block;width:2px;height:11px;background:var(--info);margin-right:6px;vertical-align:middle}
+.mvcell{font-family:var(--mono);font-size:13px;color:var(--ink2);margin-top:10px}
+.mvcell b{color:var(--ink)}
+
+/* result tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 15px}
+.tile .tl{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.tile .tv{font-family:var(--mono);font-weight:600;font-size:21px;color:var(--ink);margin-top:6px;line-height:1}
+.tile .tv small{font-size:11px;color:var(--ink3);font-weight:500}
+.tile .tsub{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-top:4px}
+.tile.accent .tv{color:var(--accent)}
+
+/* notes + checklist (full width below configurator) */
+.cfg-extra{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-top:18px}
+.notes,.checklist{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px}
+.notes h3,.checklist h3{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+.note{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--ink2)}
+.note:last-child{border-bottom:none}
+.note .ni{flex:none;width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;margin-top:1px}
+.note.ok .ni{background:rgba(52,211,153,.15);color:var(--ok)} .note.ok .ni::before{content:"\2713"}
+.note.info .ni{background:rgba(56,189,248,.15);color:var(--info)} .note.info .ni::before{content:"i"}
+.note.warn .ni{background:rgba(245,158,11,.15);color:var(--warn)} .note.warn .ni::before{content:"!"}
+.note.danger .ni{background:rgba(239,68,68,.15);color:var(--danger)} .note.danger .ni::before{content:"\00D7"}
+.note b{color:var(--ink);font-weight:600}
+.check{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;font-size:13.5px;color:var(--ink2);user-select:none}
+.check:last-child{border-bottom:none}
+.check .box{flex:none;width:19px;height:19px;border-radius:5px;border:1.5px solid var(--ink3);margin-top:1px;display:grid;place-items:center;transition:.15s;font-family:var(--mono);font-size:12px}
+.check[data-on="1"] .box{background:var(--accent);border-color:var(--accent);color:#0A0C10}
+.check[data-on="1"] .box::before{content:"\2713"}
+.check[data-on="1"] .ctxt{color:var(--ink3);text-decoration:line-through}
+
+/* ===== CC-CV diagram ===== */
+.cccv{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:22px 24px}
+.cccv-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center}
+.cccv svg{width:100%;height:auto;display:block}
+.cccvsvg .ax{stroke:var(--line);stroke-width:1}
+.cccvsvg .div{stroke:var(--ink3);stroke-width:1;opacity:.5}
+.cccvsvg .tx{fill:var(--ink3);font-family:var(--mono);font-size:11px}
+.cccvsvg .ti{fill:var(--accent);font-family:var(--mono);font-size:11px}
+.cccvsvg .tv{fill:var(--info);font-family:var(--mono);font-size:11px}
+.cccvsvg .lv{stroke:var(--info);stroke-width:2.5}
+.cccvsvg .li{stroke:var(--accent);stroke-width:2.5}
+.cccv .legend{display:flex;gap:18px;margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--ink2)}
+.cccv .legend i{font-style:normal}
+.cccv .lk{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.steps{list-style:none;counter-reset:s;margin:0}
+.steps li{counter-increment:s;position:relative;padding:9px 0 9px 40px;border-bottom:1px solid var(--line-soft);font-size:14px;color:var(--ink2)}
+.steps li:last-child{border-bottom:none}
+.steps li b{color:var(--ink);font-weight:600}
+.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:26px;height:26px;border-radius:7px;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:12px;font-weight:600;display:grid;place-items:center}
+
+/* generic info cards grid */
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.card h3{font-family:var(--disp);font-weight:700;font-size:17px;margin-bottom:10px}
+.card p{font-size:13.5px;color:var(--ink2);margin-bottom:10px}
+.card p:last-child{margin-bottom:0}
+.card b{color:var(--ink);font-weight:600}
+.card .big{font-family:var(--mono);font-weight:600;font-size:24px;color:var(--accent);margin:4px 0 8px}
+.card code{font-family:var(--mono);font-size:12.5px;background:var(--bg);border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--accent)}
+.card ul{list-style:none;margin-top:8px}
+.card li{font-size:13px;color:var(--ink2);padding:6px 0 6px 18px;position:relative;border-bottom:1px solid var(--line-soft)}
+.card li:last-child{border-bottom:none}
+.card li::before{content:"\203A";position:absolute;left:0;color:var(--accent);font-weight:600}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+.tblwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tblscroll{overflow-x:auto}
+.tbl th{text-align:left;padding:13px 16px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap}
+.tbl td{padding:12px 16px;border-bottom:1px solid var(--line-soft);color:var(--ink2);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.cap{color:var(--ink);font-weight:600}
+.tbl td.hl{color:var(--accent)}
+.tbl tr.active td{background:var(--accent-dim)}
+.tbl tr.active td.cap{color:var(--accent)}
+
+/* pinout */
+.pinout{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin:6px 0 4px}
+.pin{display:flex;flex-direction:column;align-items:center;gap:6px}
+.pin .pwire{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;color:#0A0C10}
+.pin .pv{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+
+/* troubleshooting */
+.trouble{display:flex;flex-direction:column;gap:10px}
+details.tr{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+details.tr[open]{border-color:var(--accent)}
+details.tr summary{cursor:pointer;list-style:none;padding:16px 20px;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:14px;color:var(--ink);user-select:none}
+details.tr summary::-webkit-details-marker{display:none}
+details.tr summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tr .code{font-family:var(--mono);font-size:12px;color:var(--danger);border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);padding:3px 8px;border-radius:6px;flex:none}
+.tr .ic{margin-left:auto;color:var(--ink3);font-family:var(--mono);font-size:18px;transition:.3s}
+details.tr[open] .ic{transform:rotate(45deg);color:var(--accent)}
+.tr-body{padding:0 20px 18px 20px;color:var(--ink2);font-size:13.5px}
+.tr-body b{color:var(--ink)}
+.tr-body .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:10px 0 4px}
+
+/* safety do/dont */
+.dosdonts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dcol{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px}
+.dcol h3{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.dcol.do h3{color:var(--ok)} .dcol.dont h3{color:var(--danger)}
+.dcol ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.dcol li{font-size:13.5px;color:var(--ink2);padding-left:20px;position:relative}
+.dcol li::before{position:absolute;left:0;top:0;font-family:var(--mono);font-weight:600}
+.dcol.do li::before{content:"\2713";color:var(--ok)}
+.dcol.dont li::before{content:"\00D7";color:var(--danger)}
+
+/* footer */
+footer{padding:42px 0 60px;border-top:1px solid var(--line)}
+.caveats{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.caveats h3{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);margin-bottom:16px}
+.caveats ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+.caveats li{font-size:13px;color:var(--ink2);padding-left:22px;position:relative}
+.caveats li::before{content:"!";position:absolute;left:0;top:0;color:var(--warn);font-family:var(--mono);font-weight:600}
+.foot-meta{margin-top:22px;font-family:var(--mono);font-size:11.5px;color:var(--ink3);letter-spacing:.04em;line-height:1.7}
+.foot-meta b{color:var(--ink2)}
+
+/* responsive */
+@media(max-width:900px){
+  .configurator{grid-template-columns:1fr}
+  .cfg-extra{grid-template-columns:1fr}
+  .cccv-grid{grid-template-columns:1fr}
+  .cards3{grid-template-columns:1fr}
+  .cards2{grid-template-columns:1fr}
+  .dosdonts{grid-template-columns:1fr}
+  .sec-head p{margin-left:0}
+}
+@media(max-width:520px){
+  .chem-chips{grid-template-columns:repeat(2,1fr)}
+  .tiles{grid-template-columns:1fr}
+  .frow2{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="statusbar">
+  <div class="wrap">
+    <span class="dot"></span>
+    <b>DRONE&nbsp;POWER&nbsp;//&nbsp;ЗАРЯДНА&nbsp;СТАНЦІЯ</b>
+    <div class="sb-right">
+      <span class="hide">CC-CV&nbsp;·&nbsp;BALANCE</span>
+      <span class="hide">ЕЛЕКТРО-ДОВІДНИК</span>
+      <span>v2026.1</span>
+    </div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Помічник із заряджання</div>
+    <h1>Зарядна<br><span class="lo">станція</span></h1>
+    <p class="lede">Оберіть акумулятор — і отримайте готову програму заряду: <b>до якої напруги заряджати</b>, <b>який струм і потужність</b> виставити на пристрої, скільки часу, що ввести в налаштування та як зробити це безпечно. Нижче — повний електро-довідник.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============ CONFIGURATOR ============ -->
+<section id="cfg">
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2>Конфігуратор заряду</h2>
+    <p>Параметри ліворуч — готова програма для зарядного праворуч.</p>
+  </div>
+
+  <div class="configurator">
+    <!-- controls -->
+    <div class="cfg-panel">
+      <h3>Параметри акумулятора</h3>
+      <div class="chem-chips" id="chips"></div>
+
+      <div class="frow2">
+        <div class="field">
+          <label for="cap">Ємність — мА·год</label>
+          <input id="cap" type="number" value="1300" min="50" step="50" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="scount">Комірок — S</label>
+          <select id="scount">
+            <option>1</option><option>2</option><option>3</option><option selected>6</option>
+            <option>4</option><option>5</option><option>7</option><option>8</option>
+            <option>10</option><option>12</option><option>14</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:8px"><label>Мета заряду — на скільки заряджати</label></div>
+      <div class="seg" id="goal">
+        <button data-goal="fly" aria-pressed="true">Повний<span class="sub">для польоту</span></button>
+        <button data-goal="storage" aria-pressed="false">Зберігання<span class="sub">для паузи</span></button>
+      </div>
+
+      <div class="speedlab">Швидкість — струм заряду</div>
+      <div class="speed" id="speed">
+        <button class="sbtn" data-c="0.5">0.5C<span class="ss">бережливо</span></button>
+        <button class="sbtn on" data-c="1">1C<span class="ss">стандарт</span></button>
+        <button class="sbtn" data-c="2">2C<span class="ss">швидко</span></button>
+      </div>
+    </div>
+
+    <!-- output -->
+    <div class="cfg-out">
+      <div class="console">
+        <div class="console-head"><span class="cdot"></span> ЗАРЯДНИЙ · ПРОГРАМА <span class="chl" id="chemLabel">LiPo</span></div>
+        <div class="console-body" id="console"></div>
+      </div>
+
+      <div class="meter">
+        <div class="mtop"><span class="ml">Рівень заряду до мети</span><span class="mpct" id="mpct">100%</span></div>
+        <div class="batwrap">
+          <div class="battery"><div class="bfill" id="bfill" style="width:100%"></div><div class="btick" id="btick" style="left:55%"></div></div>
+          <div class="bnub"></div>
+        </div>
+        <div class="mlegend"><i><span class="sw"></span>заряд до мети</i><i><span class="swl"></span>рівень зберігання</i></div>
+        <div class="mvcell" id="mvcell"></div>
+      </div>
+
+      <div class="tiles">
+        <div class="tile accent"><div class="tl">До напруги</div><div class="tv" id="tVcell"></div><div class="tsub" id="tVpack"></div></div>
+        <div class="tile accent"><div class="tl">Струм заряду</div><div class="tv" id="tAmp"></div><div class="tsub" id="tCrate"></div></div>
+        <div class="tile accent"><div class="tl">Потужність</div><div class="tv" id="tPow"></div><div class="tsub" id="tWall"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cfg-extra">
+    <div class="notes">
+      <h3>Що врахувати для цього паку</h3>
+      <div id="notes"></div>
+    </div>
+    <div class="checklist">
+      <h3>Чек-лист перед стартом</h3>
+      <div id="checklist"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CC-CV ============ -->
+<section id="cccv">
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2>Як працює заряджання (CC-CV)</h2>
+    <p>Дві фази — постійний струм, потім постійна напруга. Звідси й час, і баланс.</p>
+  </div>
+
+  <div class="cccv">
+    <div class="cccv-grid">
+      <div>
+        <svg class="cccvsvg" viewBox="0 0 420 260" xmlns="http://www.w3.org/2000/svg" aria-label="Графік CC-CV">
+          <line class="ax" x1="40" y1="20" x2="40" y2="220"/>
+          <line class="ax" x1="40" y1="220" x2="400" y2="220"/>
+          <line class="div" x1="250" y1="20" x2="250" y2="220" stroke-dasharray="4 4"/>
+          <text class="tx" x="145" y="245" text-anchor="middle">Фаза CC</text>
+          <text class="tx" x="325" y="245" text-anchor="middle">Фаза CV</text>
+          <path id="vLine" class="lv" d="M40,180 C120,150 200,95 250,70 C300,55 360,52 400,52" fill="none"/>
+          <path id="iLine" class="li" d="M40,60 L250,60 C300,60 330,150 400,205" fill="none"/>
+          <text class="ti" x="55" y="50">струм</text>
+          <text class="tv" x="350" y="44">напруга</text>
+        </svg>
+        <div class="legend"><i><span class="lk" style="background:var(--accent)"></span>струм (А)</i><i><span class="lk" style="background:var(--info)"></span>напруга (В)</i></div>
+      </div>
+      <div>
+        <ol class="steps">
+          <li><b>CC — постійний струм.</b> Пристрій тримає заданий струм (напр. 1.3 А), напруга комірок повільно росте. Тут набирається ~80% ємності.</li>
+          <li><b>CV — постійна напруга.</b> Досягнувши стелі (4.20 В/комірка), пристрій утримує напругу, а струм плавно падає. Тут — повільні останні ~20% і балансування.</li>
+          <li><b>Баланс.</b> Через балансувальний роз'єм заряд вирівнює напругу всіх комірок до різниці <code>&le;0.05 В</code>, щоб пак старів рівномірно.</li>
+          <li><b>Стоп.</b> Коли струм у фазі CV падає до ~порогу (зазвичай ~C/20), заряд завершується. Саме тому 1C ≈ 60–75 хв, а не рівно 60.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHARGER & PSU ============ -->
+<section id="psu">
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2>Зарядний пристрій і блок живлення</h2>
+    <p>Як порахувати потрібні вати й ампери, щоб нічого не «впиралось».</p>
+  </div>
+
+  <div class="cards3">
+    <div class="card">
+      <h3>Потужність зарядного</h3>
+      <p>Зарядному потрібно видати щонайменше: <b>напруга паку × струм заряду</b>.</p>
+      <div class="big">Вт = В × А</div>
+      <p>6S 1300 мА·год на 1C: 25.2 В × 1.3 А ≈ <b>33 Вт</b>. Беріть пристрій із запасом 1.5–2× від піку (тут від ~60–100 Вт).</p>
+    </div>
+    <div class="card">
+      <h3>Блок живлення (БЖ)</h3>
+      <p>БЖ живить зарядне. З урахуванням ККД (~85%) від мережі споживається трохи більше за вихід.</p>
+      <p>Для виходу 33 Вт від <b>12 В</b> блока струм ≈ <code>33 / 0.85 / 12 ≈ 3.2 А</code>. Для кількох паків одночасно — сумуйте.</p>
+      <p>Типові зв'язки: зарядне 100–300 Вт + БЖ на 12–24 В і відповідні ампери.</p>
+    </div>
+    <div class="card">
+      <h3>Паралельне заряджання</h3>
+      <p>Параборд (paraboard) заряджає кілька паків як один — <b>струми складаються</b>.</p>
+      <p>Чотири 1300 мА·год на 1C = 4 × 1.3 = <b>5.2 А</b> і ~130 Вт. Пристрій має тягнути цей струм/ват.</p>
+      <ul>
+        <li>Лише однакові хімія та кількість S</li>
+        <li>Напруга паків у межах ~0.1 В/комірка одна від одної</li>
+        <li>Баланс-ліди всіх паків під'єднані</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CURRENT TABLE ============ -->
+<section id="table">
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2>Таблиця струмів заряду</h2>
+    <p>Швидкий пошук струму за ємністю. Поточна ємність із конфігуратора підсвічена.</p>
+  </div>
+  <div class="tblwrap"><div class="tblscroll">
+    <table class="tbl" id="currentTable">
+      <thead><tr><th>Ємність</th><th>0.5C · бережливо</th><th>1C · стандарт</th><th>2C · швидко</th><th>Час 1C</th></tr></thead>
+      <tbody id="currentBody"></tbody>
+    </table>
+  </div></div>
+  <p style="font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:12px">Струм = (ємність / 1000) × C. LiPo/LiHV — 1C стандарт. Li-Ion: потужні комірки (P42A) 1C–2C, високоємнісні 0.5C. 2C для LiPo — лише якщо пак прямо позначений як charge-capable. Завжди звіряйтесь із datasheet.</p>
+</section>
+
+<!-- ============ CONNECTORS / BALANCE / WIRE ============ -->
+<section id="conn">
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2>Роз'єми, балансир і дроти</h2>
+    <p>Фізика підключення: що тримає струм, як влаштований баланс-роз'єм, який дріт ставити.</p>
+  </div>
+
+  <div class="cards2" style="margin-bottom:16px">
+    <div class="card">
+      <h3>Силові роз'єми</h3>
+      <ul>
+        <li><b>XT30</b> — ~30 А · мікро/легкі 2S–4S</li>
+        <li><b>XT60</b> — ~60 А (≤180 А піково) · стандарт 5" 4S/6S</li>
+        <li><b>XT90 / XT90-S</b> — ~90–120 А · важкі 7"+ · S-версія з антиіскрою</li>
+      </ul>
+      <p style="margin-top:10px">Силовий роз'єм передає робочий струм моторів — обирайте з запасом над піком.</p>
+    </div>
+    <div class="card">
+      <h3>Балансувальний роз'єм (JST-XH)</h3>
+      <p>Для пакету на <b>n</b> комірок має <b>n+1</b> провід — окремий доступ до кожної комірки для вимірювання й вирівнювання. Приклад 3S:</p>
+      <div class="pinout">
+        <div class="pin"><div class="pwire" style="background:#444">B−</div><div class="pv">0 В</div></div>
+        <div class="pin"><div class="pwire" style="background:#FFB627">1</div><div class="pv">3.7 В</div></div>
+        <div class="pin"><div class="pwire" style="background:#FF8C42">2</div><div class="pv">7.4 В</div></div>
+        <div class="pin"><div class="pwire" style="background:#FF5E3A">3</div><div class="pv">11.1 В</div></div>
+      </div>
+      <p style="margin-top:8px">Чорний — найнегативніший контакт. Напруга на пінах наростає сходинками. Через нього зарядне «бачить» кожну комірку окремо.</p>
+    </div>
+  </div>
+
+  <div class="tblwrap"><div class="tblscroll">
+    <table class="tbl">
+      <thead><tr><th>Переріз (AWG)</th><th>Орієнт. тривалий струм*</th><th>Типове застосування</th></tr></thead>
+      <tbody>
+        <tr><td class="cap">8 AWG</td><td class="hl">~60+ А</td><td>важкі паки, XT90, 7"+</td></tr>
+        <tr><td class="cap">10 AWG</td><td class="hl">~40 А</td><td>силові лінії 6S, XT60</td></tr>
+        <tr><td class="cap">12 AWG</td><td class="hl">~30 А</td><td>5" квади, XT60</td></tr>
+        <tr><td class="cap">14 AWG</td><td class="hl">~20 А</td><td>легкі білди, XT30</td></tr>
+        <tr><td class="cap">16 AWG</td><td class="hl">~13 А</td><td>мікро, баланс-силові</td></tr>
+        <tr><td class="cap">18 AWG</td><td class="hl">~10 А</td><td>дрібні вузли</td></tr>
+        <tr><td class="cap">20 AWG</td><td class="hl">~7 А</td><td>сигнальні/малострумові</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <p style="font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:12px">*Для коротких силіконових проводів у відкритому повітрі. Тонкий дріт на великому струмі гріється й дає падіння напруги — на тязі це втрачена потужність.</p>
+</section>
+
+<!-- ============ TROUBLESHOOTING + SAFETY ============ -->
+<section id="trouble">
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2>Несправності та безпека</h2>
+    <p>Що означають типові помилки зарядного й що з ними робити.</p>
+  </div>
+
+  <div class="trouble" style="margin-bottom:18px">
+    <details class="tr" open>
+      <summary><span class="code">CONNECTION BREAK</span> Розрив підключення<span class="ic">+</span></summary>
+      <div class="tr-body">
+        <div class="lbl">Причина</div>Поганий контакт силового або балансувального роз'єму, холодна пайка, окислені контакти.
+        <div class="lbl">Дія</div>Перевірте пайку й контакти, щільність роз'єму, спробуйте інший роз'єм/кабель. Огляньте баланс-лід на обрив.
+      </div>
+    </details>
+    <details class="tr">
+      <summary><span class="code">CELL VOLTAGE / LOW VOLTAGE</span> Хибна напруга комірки<span class="ic">+</span></summary>
+      <div class="tr-body">
+        <div class="lbl">Причина</div>Переразряджена комірка, або в налаштуваннях виставлено невірну кількість <b>S</b>.
+        <div class="lbl">Дія</div>Звірте кількість S з етикеткою. Виміряйте напруги комірок. Глибоко розряджені (нижче 3.0 В) — лише дуже малим струмом і під наглядом, інакше на утилізацію.
+      </div>
+    </details>
+    <details class="tr">
+      <summary><span class="code">BALANCE ERROR</span> Помилка балансування<span class="ic">+</span></summary>
+      <div class="tr-body">
+        <div class="lbl">Причина</div>Дисбаланс між комірками перевищує допуск (різниця напруг завелика).
+        <div class="lbl">Дія</div>Зарядіть у режимі Balance малим струмом (0.5C). Якщо різниця не зникає за кілька циклів — комірка деградувала, пак на списання.
+      </div>
+    </details>
+    <details class="tr">
+      <summary><span class="code">REVERSE POLARITY</span> Зворотна полярність<span class="ic">+</span></summary>
+      <div class="tr-body">
+        <div class="lbl">Причина</div>Переплутані «плюс» і «мінус».
+        <div class="lbl">Дія</div>Негайно від'єднайте. Перевірте проводку й роз'єм. Заряд із переполюсуванням може пошкодити і пак, і пристрій.
+      </div>
+    </details>
+    <details class="tr">
+      <summary><span class="code">TEMP / OVERHEAT</span> Перегрів<span class="ic">+</span></summary>
+      <div class="tr-body">
+        <div class="lbl">Причина</div>Пак або зарядне перегрілись (високий струм, погана вентиляція, гарячий пак після польоту).
+        <div class="lbl">Дія</div>Зупиніть заряд, дайте охолонути до кімнатної. Зменшіть струм, забезпечте вентиляцію. Гарячий після польоту пак заряджайте лише охолодженим.
+      </div>
+    </details>
+  </div>
+
+  <div class="dosdonts">
+    <div class="dcol do">
+      <h3>Робіть</h3>
+      <ul>
+        <li>Заряджайте під наглядом, у вогнетривкій сумці чи металевому ammo-боксі</li>
+        <li>Виставляйте правильний режим хімії та кількість S</li>
+        <li>Тримайте струм 0.5–1C на щодень</li>
+        <li>Під'єднуйте балансир для 2S і більше</li>
+        <li>Зберігайте при 3.8 В/комірка, якщо пауза понад тиждень</li>
+        <li>Маркуйте дату й стежте за внутрішнім опором (IR)</li>
+      </ul>
+    </div>
+    <div class="dcol dont">
+      <h3>Не робіть</h3>
+      <ul>
+        <li>Не лишайте заряд без нагляду й на ніч</li>
+        <li>Не заряджайте здутий, пробитий чи гарячий пак</li>
+        <li>Не заряджайте холодний пак (&lt;4°C) — ризик плейтингу</li>
+        <li>Не ставте звичайний LiPo у режим LiHV (4.35 В)</li>
+        <li>Не перевищуйте 1C без позначки charge-capable</li>
+        <li>Не паралельте паки з різною напругою чи кількістю S</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <div class="caveats">
+    <h3>Застереження</h3>
+    <ul>
+      <li><b>Це довідка, а не заміна інструкції</b> вашого зарядного пристрою та виробника акумулятора — за конфлікту пріоритет у них.</li>
+      <li><b>Час заряду орієнтовний:</b> залежить від поточного стану паку, температури й алгоритму пристрою. Фаза CV завжди подовжує процес.</li>
+      <li><b>Потужність — практична оцінка:</b> реальний пік залежить від просідання й ККД; беріть пристрій і блок живлення із запасом.</li>
+      <li><b>Струм заряду Li-Ion залежить від комірки:</b> потужні (Molicel P42A) — 1C стандарт і до 2C максимум за datasheet; високоємнісні «лонг-рейндж» комірки — 0.5C. Завжди звіряйтесь із datasheet конкретної комірки.</li>
+      <li><b>Робота з літієм пов'язана з ризиком пожежі.</b> Дійте уважно, на негорючій поверхні та на власну відповідальність.</li>
+    </ul>
+    <div class="foot-meta">
+      Дані та практики: <b>Oscar Liang</b> (FPV-гайди із заряджання, баланс, IR), <b>datasheet Molicel</b> (струми заряду Li-Ion), документація зарядних ISDT / ToolkitRC / HOTA, FPV-спільнота. · Усі напруги — на комірку. · v2026.1
+    </div>
+  </div>
+</footer>
+
+<script>
+const CHEM = {
+  lipo:    {name:"LiPo",        root:"LiPo",   color:"#FFB627", full:4.20, store:3.85, fastMax:3},
+  lihv:    {name:"LiHV",        root:"LiHV",   color:"#FF5E3A", full:4.35, store:3.85, fastMax:2},
+  liion:   {name:"Li-Ion",      root:"Li-Ion", color:"#2DD4BF", full:4.20, store:3.75, fastMax:2},
+  lifepo4: {name:"LiFePO4",     root:"LiFe",   color:"#7BD389", full:3.65, store:3.30, fastMax:3},
+  graphene:{name:"Графен",      root:"LiPo",   color:"#B8C0CC", full:4.20, store:3.85, fastMax:5},
+  semisolid:{name:"Напівтверд.", root:"Li-Ion", color:"#A78BFA", full:4.20, store:3.80, fastMax:1, slow:1}
+};
+const ORDER=["lipo","lihv","liion","lifepo4","graphene","semisolid"];
+let state={chem:"lipo", cap:1300, s:6, goal:"fly", c:1};
+
+function hexA(hex,a){const h=hex.replace('#','');return 'rgba('+parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)+','+a+')';}
+function ceilNice(w){ if(w<10) return Math.ceil(w); if(w<100) return Math.ceil(w/5)*5; return Math.ceil(w/10)*10; }
+
+// build chem chips
+const chipsEl=document.getElementById("chips");
+ORDER.forEach(k=>{
+  const c=CHEM[k];
+  const b=document.createElement("button");
+  b.className="chchip"; b.dataset.k=k; b.setAttribute("aria-pressed",k===state.chem);
+  b.style.setProperty("--chc",c.color);
+  b.innerHTML='<span class="cc-n">'+c.name+'</span><span class="cc-sw" style="background:'+c.color+'"></span>';
+  b.addEventListener("click",()=>{ state.chem=k; clampSpeed(); render(); });
+  chipsEl.appendChild(b);
+});
+
+// goal toggle
+document.getElementById("goal").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  state.goal=b.dataset.goal; render();
+});
+// speed
+document.getElementById("speed").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b||b.disabled)return;
+  state.c=parseFloat(b.dataset.c); render();
+});
+// inputs
+document.getElementById("cap").addEventListener("input",e=>{ state.cap=parseFloat(e.target.value)||0; render(); });
+document.getElementById("scount").addEventListener("change",e=>{ state.s=parseInt(e.target.value); render(); });
+
+function clampSpeed(){
+  const fm=CHEM[state.chem].fastMax;
+  const allowed=[0.5,1,2].filter(x=>x<=fm);
+  if(!allowed.includes(state.c)) state.c=allowed[allowed.length-1];
+}
+
+function cWarn(){
+  const c=CHEM[state.chem], C=state.c, k=state.chem;
+  if(k==='liion'){
+    if(C<=0.5) return {t:'ok',m:'Бережливо — підходить для будь-яких Li-Ion, максимальний ресурс.'};
+    if(C<=1)  return {t:'ok',m:'Стандартний заряд потужних комірок (Molicel P42A: 1C = 4.2 А). Високоємнісні «лонг-рейндж» комірки тримайте на 0.5C.'};
+    return {t:'warn',m:'2C — datasheet-максимум потужних комірок (P42A: 8.4 А). Лише якщо ваша комірка прямо це дозволяє; інакше 0.5–1C.'};
+  }
+  if(k==='semisolid'){
+    if(C<=0.5) return {t:'ok',m:'Бережливо — безпечно для нової хімії.'};
+    return {t:'warn',m:'Орієнтуйтесь на datasheet виробника — норми заряду напівтвердотільних ще не уніфіковані.'};
+  }
+  if(C<=1) return {t:'ok',m:(C<=0.5?'Бережливий струм — максимальний ресурс паку.':'Стандартний струм 1C — безпечно на щодень.')};
+  if(C<=c.fastMax) return {t:'warn',m:'Швидке заряджання. Лише якщо пак позначений як charge-capable на таку швидкість.'};
+  return {t:'danger',m:'Перевищує безпечний максимум для цієї хімії — ризик нагріву й здуття.'};
+}
+
+function render(){
+  const c=CHEM[state.chem];
+  document.documentElement.style.setProperty("--accent",c.color);
+  document.documentElement.style.setProperty("--accent-dim",hexA(c.color,.14));
+  document.documentElement.style.setProperty("--accent-glow",hexA(c.color,.3));
+
+  // chips state
+  document.querySelectorAll(".chchip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===state.chem));
+  // goal state
+  document.querySelectorAll("#goal button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.goal===state.goal));
+  // speed availability + state
+  document.querySelectorAll("#speed .sbtn").forEach(b=>{
+    const v=parseFloat(b.dataset.c);
+    b.disabled = v>c.fastMax;
+    b.classList.toggle("on", v===state.c && !b.disabled);
+  });
+  document.getElementById("chemLabel").textContent=c.name;
+
+  const endVcell = state.goal==="fly" ? c.full : c.store;
+  const endVpack = endVcell*state.s;
+  const amps = (state.cap/1000)*state.c;
+  const powerW = endVpack*amps;
+  const wallW = powerW/0.85;
+  const fill = state.goal==="fly" ? 100 : 55;
+  const storePct = 55;
+
+  // console
+  const balance = state.s>=2 ? "ON" : "—";
+  const modeTxt = state.goal==="storage" ? c.root+" Storage" : (state.s>=2 ? c.root+" Balance" : c.root);
+  const tailHi = (state.chem==="liion"||state.chem==="semisolid") ? 100 : 75;
+  const timeTxt = state.goal==="fly" ? "~"+Math.round(60/state.c)+"–"+Math.round(tailHi/state.c)+" хв" : "коротше (від стану)";
+  document.getElementById("console").innerHTML=
+    row("MODE", modeTxt)+
+    row("CELLS", state.s+"S")+
+    row("CURRENT", amps.toFixed(2)+" A","("+state.c.toFixed(1)+"C)")+
+    row("END V", endVcell.toFixed(2)+" V/cell")+
+    row("PACK V", endVpack.toFixed(1)+" V")+
+    row("BALANCE", balance)+
+    row("POWER", "~"+ceilNice(powerW)+" W")+
+    row("TIME", timeTxt);
+
+  // meter
+  document.getElementById("bfill").style.width=fill+"%";
+  document.getElementById("btick").style.left=storePct+"%";
+  document.getElementById("mpct").textContent=fill+"%";
+  document.getElementById("mvcell").innerHTML="Заряджати до <b>"+endVcell.toFixed(2)+" В/комірка</b> · "+(state.goal==="fly"?"повний заряд для польоту":"рівень зберігання для паузи");
+
+  // tiles
+  document.getElementById("tVcell").innerHTML=endVcell.toFixed(2)+"<small> В/ком.</small>";
+  document.getElementById("tVpack").textContent="пак "+endVpack.toFixed(1)+" В";
+  document.getElementById("tAmp").innerHTML=amps.toFixed(2)+"<small> А</small>";
+  document.getElementById("tCrate").textContent=state.c.toFixed(1)+"C від ємності";
+  document.getElementById("tPow").innerHTML="~"+ceilNice(powerW)+"<small> Вт</small>";
+  document.getElementById("tWall").textContent="від БЖ ~"+ceilNice(wallW)+" Вт";
+
+  // notes
+  const notes=[];
+  notes.push(state.s>=2
+    ? {t:'info', h:'Балансир обов\u02BCязковий.', m:' Під\u02BCєднайте і силовий, і балансувальний роз\u02BCєм (JST-XH).'}
+    : {t:'ok', h:'1S — балансир не потрібен.', m:' Достатньо силового роз\u02BCєму.'});
+  const cw=cWarn(); notes.push({t:cw.t, h:'Струм '+state.c.toFixed(1)+'C.', m:' '+cw.m});
+  if(state.chem==="lihv" && state.goal==="fly")
+    notes.push({t:'warn', h:'LiHV до '+c.full.toFixed(2)+' В/комірка.', m:' Для '+state.s+'S це '+(c.full*state.s).toFixed(1)+' В — переконайтесь, що ESC/обладнання тримає таку напругу.'});
+  if(state.goal==="storage")
+    notes.push({t:'info', h:'Режим Storage.', m:' Пристрій сам приведе пак до '+c.store.toFixed(2)+' В/комірка (~'+storePct+'%). Найкраще для пауз понад тиждень.'});
+  notes.push({t:'warn', h:'Температура.', m:' Не заряджайте холодний (<4°C) чи гарячий (>40°C) пак — дайте набути кімнатної.'});
+  notes.push({t:'danger', h:'Під наглядом.', m:' Заряд лише у вогнетривкій тарі, на негорючій поверхні. Зупиніть при здутті, запаху чи нагріві.'});
+  document.getElementById("notes").innerHTML=notes.map(n=>
+    '<div class="note '+n.t+'"><span class="ni"></span><span><b>'+n.h+'</b>'+n.m+'</span></div>').join("");
+
+  // current table active row
+  document.querySelectorAll("#currentBody tr").forEach(tr=>{
+    tr.classList.toggle("active", parseInt(tr.dataset.cap)===Math.round(state.cap));
+  });
+}
+function row(l,v,i){ return '<div class="crow"><span>'+l+'</span><b>'+v+(i?'<i>'+i+'</i>':'')+'</b></div>'; }
+
+// checklist (interactive toggles)
+const CHECKS=[
+  "Правильний режим хімії на зарядному",
+  "Кількість S збігається з етикеткою",
+  "Струм виставлено (не вище 1C на щодень)",
+  "Балансувальний роз\u02BCєм під\u02BCєднано (2S+)",
+  "Заряд у вогнетривкій тарі, під наглядом",
+  "Пак не здутий, не пошкоджений, не холодний"
+];
+document.getElementById("checklist").innerHTML=CHECKS.map(t=>
+  '<div class="check" data-on="0"><span class="box"></span><span class="ctxt">'+t+'</span></div>').join("");
+document.getElementById("checklist").addEventListener("click",e=>{
+  const ch=e.target.closest(".check"); if(!ch)return;
+  ch.dataset.on = ch.dataset.on==="1"?"0":"1";
+});
+
+// build current table
+const CAPS=[450,650,850,1100,1300,1500,1800,2200,3000,4000,5000];
+document.getElementById("currentBody").innerHTML=CAPS.map(mAh=>{
+  const ah=mAh/1000;
+  return '<tr data-cap="'+mAh+'"><td class="cap">'+mAh+' мА·год</td>'+
+    '<td>'+(ah*0.5).toFixed(2)+' А</td>'+
+    '<td class="hl">'+(ah*1).toFixed(2)+' А</td>'+
+    '<td>'+(ah*2).toFixed(2)+' А</td>'+
+    '<td>~'+'60–75 хв</td></tr>';
+}).join("");
+
+// init
+clampSpeed();
+render();
+
+// CC-CV draw-on
+if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+  ["vLine","iLine"].forEach((id,idx)=>{
+    const p=document.getElementById(id); if(!p)return;
+    const len=p.getTotalLength();
+    p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+    p.style.transition="stroke-dashoffset 1.6s cubic-bezier(.22,1,.36,1) "+(idx*0.25)+"s";
+    requestAnimationFrame(()=>{ p.style.strokeDashoffset=0; });
+  });
+}
+</script>
+</body>
+</html>
